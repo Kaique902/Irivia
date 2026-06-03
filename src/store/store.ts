@@ -229,6 +229,8 @@ export const useStore = create<AppState>()(
       })),
 
       addStory: (story) => {
+        const { user } = get();
+        if (!user) return;
         const cleanStory = {
           ...story,
           title: sanitizeString(story.title, 100),
@@ -240,6 +242,8 @@ export const useStore = create<AppState>()(
       },
 
       removeStory: (storyId) => {
+        const { user } = get();
+        if (!user) return;
         dbRemoveStory(storyId);
         set((s) => ({
           stories: s.stories.filter(st => st.id !== storyId),
@@ -250,6 +254,7 @@ export const useStore = create<AppState>()(
 
       addNode: (storyId, node) => {
         const { stories, users, user } = get();
+        if (!user) return;
         const story = stories.find(s => s.id === storyId);
         const cleanNode = { ...node, content: sanitizeString(node.content, 500) };
         dbAddNode(storyId, cleanNode);
@@ -275,6 +280,7 @@ export const useStore = create<AppState>()(
 
       voteNode: (nodeId, type) => {
         const { stories, users, user } = get();
+        if (!user) return;
         const story = stories.find(s => s.nodes.some(n => n.id === nodeId));
         get().recordVoteTime();
         dbVoteNode(user?.id || '', nodeId, type, stories);
@@ -305,27 +311,35 @@ export const useStore = create<AppState>()(
       },
 
       // Social
-      followUser: (userId) => set((s) => ({
-        user: s.user ? { ...s.user, following: [...s.user.following, userId] } : null,
-        users: s.users.map(u => 
-          s.user && u.id === s.user.id ? { ...u, following: [...u.following, userId] } : u
-        ),
-      })),
+      followUser: (userId) => set((s) => {
+        if (!s.user) return {};
+        return {
+          user: { ...s.user, following: [...s.user.following, userId] },
+          users: s.users.map(u =>
+            u.id === s.user!.id ? { ...u, following: [...u.following, userId] } : u
+          ),
+        };
+      }),
 
-      unfollowUser: (userId) => set((s) => ({
-        user: s.user ? { ...s.user, following: s.user.following.filter(id => id !== userId) } : null,
-        users: s.users.map(u => 
-          s.user && u.id === s.user.id ? { ...u, following: u.following.filter(id => id !== userId) } : u
-        ),
-      })),
+      unfollowUser: (userId) => set((s) => {
+        if (!s.user) return {};
+        return {
+          user: { ...s.user, following: s.user.following.filter(id => id !== userId) },
+          users: s.users.map(u =>
+            u.id === s.user!.id ? { ...u, following: u.following.filter(id => id !== userId) } : u
+          ),
+        };
+      }),
 
-      followStory: (storyId) => set((s) => ({
-        user: s.user ? { ...s.user, followedStories: [...(s.user.followedStories ?? []), storyId] } : null,
-      })),
+      followStory: (storyId) => set((s) => {
+        if (!s.user) return {};
+        return { user: { ...s.user, followedStories: [...(s.user.followedStories ?? []), storyId] } };
+      }),
 
-      unfollowStory: (storyId) => set((s) => ({
-        user: s.user ? { ...s.user, followedStories: (s.user.followedStories ?? []).filter(id => id !== storyId) } : null,
-      })),
+      unfollowStory: (storyId) => set((s) => {
+        if (!s.user) return {};
+        return { user: { ...s.user, followedStories: (s.user.followedStories ?? []).filter(id => id !== storyId) } };
+      }),
 
       toggleMuteStory: (storyId) => set((s) => {
         if (!s.user) return {};
@@ -338,6 +352,8 @@ export const useStore = create<AppState>()(
 
       // Comments
       addComment: (comment) => {
+        const { user } = get();
+        if (!user) return;
         const cleanComment = { ...comment, content: sanitizeString(comment.content, 300) };
         dbAddComment(cleanComment);
         set((s) => ({ comments: [...s.comments, cleanComment] }));
@@ -345,12 +361,15 @@ export const useStore = create<AppState>()(
       getComments: (nodeId) => get().comments.filter(c => c.nodeId === nodeId),
 
       // Challenges
-      completeChallenge: (challengeId) => set((s) => ({
-        challenges: s.challenges.map(c => 
-          c.id === challengeId ? { ...c, completed: true } : c
-        ),
-        user: s.user ? { ...s.user, xp: s.user.xp + (s.challenges.find(c => c.id === challengeId)?.xp || 0) } : null,
-      })),
+      completeChallenge: (challengeId) => set((s) => {
+        if (!s.user) return {};
+        return {
+          challenges: s.challenges.map(c =>
+            c.id === challengeId ? { ...c, completed: true } : c
+          ),
+          user: { ...s.user, xp: s.user.xp + (s.challenges.find(c => c.id === challengeId)?.xp || 0) },
+        };
+      }),
 
       generateDailyChallenges: () => {
         const today = new Date().toISOString().split('T')[0];
