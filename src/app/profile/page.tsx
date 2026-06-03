@@ -3,17 +3,19 @@
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, EMOJIS } from '@/store/store';
-import { ArrowLeft, ArrowRight, Flame, BookOpen, Trophy, TrendingUp, LogOut, Zap, Shield, Copy, Check, MessageSquareText, Send, X, ThumbsUp, UserPlus, UserCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import AvatarPicker from '@/components/ui/AvatarPicker';
+import { ArrowLeft, ArrowRight, Flame, BookOpen, Trophy, TrendingUp, LogOut, Zap, Shield, Copy, Check, MessageSquareText, Send, X, ThumbsUp, UserPlus, UserCheck, Bug, Edit3 } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout, stories, users, followUser, unfollowUser } = useStore();
+  const { user, logout, stories, users, followUser, unfollowUser, updateAvatar } = useStore();
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -61,9 +63,18 @@ export default function ProfilePage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-orange-500/10 to-transparent rounded-bl-full" />
           
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-4xl shadow-lg shadow-orange-500/20">
-              {user.avatar}
-            </div>
+            <button onClick={() => setShowAvatarPicker(true)} className="relative group">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-4xl shadow-lg shadow-orange-500/20 overflow-hidden">
+                {user.avatar.startsWith('data:') || user.avatar.startsWith('http') ? (
+                  <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user.avatar
+                )}
+              </div>
+              <div className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Edit3 className="w-5 h-5 text-white" />
+              </div>
+            </button>
             <div className="flex-1">
               <h1 className="text-2xl font-extrabold">{user.username}</h1>
               <p className="text-zinc-500 text-sm flex items-center gap-2">
@@ -278,6 +289,10 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </main>
+
+      <AvatarPicker open={showAvatarPicker} onClose={() => setShowAvatarPicker(false)}
+        onSelect={(avatar) => { updateAvatar(avatar); setShowAvatarPicker(false); }}
+        currentAvatar={user.avatar} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { parseReferral, detectReferrer, markReferralTracked, wasReferralTracked 
 import { dbTrackReferral } from '@/lib/db';
 import InstallPrompt from '@/components/ui/InstallPrompt';
 import FeedbackPrompt from '@/components/ui/FeedbackPrompt';
+import BugReportButton from '@/components/ui/BugReportButton';
 import Toaster from '@/components/ui/Toaster';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {children}
       <InstallPrompt />
       <FeedbackPrompt />
+      <BugReportButton />
       <Toaster />
     </>
   );

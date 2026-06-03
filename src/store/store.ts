@@ -17,6 +17,17 @@ const EMOJI_GRID = [
   '🦊', '🍄', '🎪', '🦋', '✨',
 ];
 
+export const AVATARS = [
+  // Animals
+  '🦁', '🐯', '🐺', '🦊', '🐸', '🦄', '🐉', '🦅', '🐙', '🦋',
+  // Fantasy
+  '🧙', '🦸', '🧝', '🧛', '🤖', '👾', '🎭', '🧜', '🧚', '🕵️',
+  // Nature
+  '🌺', '🌸', '🌻', '🍀', '🌙', '⭐', '☀️', '🌈', '❄️', '🔥',
+  // Symbols
+  '💎', '🎯', '🎲', '🔮', '⚡', '💀', '👑', '🗡️', '🛡️', '🏆',
+];
+
 export interface User {
   id: string;
   username: string;
@@ -91,6 +102,7 @@ interface AppState {
   recordVoteTime: () => void;
   submitFeedback: (text: string) => void;
   dismissFeedback: () => void;
+  updateAvatar: (avatar: string) => void;
 
   // Moderation
   reports: Report[];
@@ -508,6 +520,11 @@ export const useStore = create<AppState>()(
       dismissFeedback: () => set({
         feedbackLastShown: Date.now(),
       }),
+
+      updateAvatar: (avatar) => set((s) => ({
+        user: s.user ? { ...s.user, avatar } : null,
+        users: s.users.map(u => s.user && u.id === s.user.id ? { ...u, avatar } : u),
+      })),
 
       // Moderation
       reportNode: (nodeId, storyId, reason, content) => {
