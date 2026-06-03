@@ -1,12 +1,13 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/store/store';
 import NotificationBell from '@/components/ui/NotificationBell';
 import { BookOpen, Plus, User, Trophy } from 'lucide-react';
 
-export default function Header() {
-  const { user } = useStore();
+function Header() {
+  const user = useStore(s => s.user);
 
   return (
     <header className="sticky top-0 z-50 bg-[#09090b]/80 backdrop-blur-xl border-b border-[#27272a]">
@@ -39,3 +40,5 @@ export default function Header() {
     </header>
   );
 }
+
+export default memo(Header);

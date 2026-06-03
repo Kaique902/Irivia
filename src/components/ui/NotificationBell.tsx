@@ -28,8 +28,8 @@ const typeColors: Record<string, string> = {
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useStore();
-  const { notifications, markAsRead, markAllAsRead, unreadCount } = useNotificationStore();
+  const user = useStore(s => s.user);
+  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
 
   // Filter notifications: show global ones or ones targeted at current user
   const myNotifications = useMemo(() => {
