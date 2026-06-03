@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/store';
 import { useNotificationStore } from '@/store/notifications';
@@ -13,7 +13,7 @@ import { createNodeDeepLink } from '@/lib/shareCard';
 
 const CommentSection = dynamic(() => import('@/components/story/CommentSection'), { ssr: false });
 const ChallengeFriend = dynamic(() => import('@/components/ui/ChallengeFriend'), { ssr: false });
-import { ArrowLeft, Flame, Snowflake, Plus, ChevronDown, ChevronUp, Send, X, Users, GitBranch, Sparkles, Flag, Check, Trophy, Zap, FileDown, Bell, BellOff, Trash2, Share2 } from 'lucide-react';
+import { ArrowLeft, Flame, Snowflake, Plus, ChevronDown, ChevronUp, Send, X, Users, GitBranch, Sparkles, Flag, Check, Trophy, Zap, FileDown, Bell, BellOff, Trash2, Share2, Swords } from 'lucide-react';
 
 // Confetti effect
 function Confetti({ show }: { show: boolean }) {
@@ -43,6 +43,8 @@ function Confetti({ show }: { show: boolean }) {
 export default function StoryPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const challengeType = searchParams.get('challenge');
   const [hydrated, setHydrated] = useState(false);
   const { stories, voteNode, addNode, removeStory, votedNodes, user, reportNode, completeReadChallenge, followStory, unfollowStory, toggleMuteStory, followUser, unfollowUser, users } = useStore();
   const { addNotification } = useNotificationStore();
@@ -328,6 +330,36 @@ export default function StoryPage() {
           <span>{Math.round(maxProgress)}% lido</span>
         </div>
       </header>
+
+      {/* Challenge banner */}
+      {challengeType && (
+        <div className="max-w-3xl mx-auto px-4 pt-4">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-xl bg-gradient-to-r from-orange-500/10 to-cyan-500/10 border border-orange-500/20 flex items-center gap-3">
+            <Swords className="w-5 h-5 text-orange-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">Desafio recebido!</p>
+              <p className="text-xs text-zinc-400">
+                {challengeType === 'write' && 'Seu amigo desafiou você a escrever uma continuação para esta história!'}
+                {challengeType === 'branch' && 'Seu amigo desafiou você a criar um novo ramo nesta história!'}
+                {challengeType === 'vote' && 'Seu amigo desafiou você a votar nos melhores rumos desta história!'}
+              </p>
+            </div>
+            <button onClick={() => {
+              if (challengeType === 'write' || challengeType === 'branch') {
+                const lastNode = mainPath[mainPath.length - 1];
+                if (lastNode) setAddingTo(lastNode);
+              }
+              const url = new URL(window.location.href);
+              url.searchParams.delete('challenge');
+              window.history.replaceState({}, '', url.toString());
+            }}
+              className="btn btn-primary text-xs py-1.5 px-3">
+              {challengeType === 'vote' ? 'Votar' : 'Escrever'}
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Story */}
       <main className="max-w-3xl mx-auto px-4 py-8">
