@@ -189,7 +189,10 @@ export async function dbGetStories(): Promise<Story[]> {
   try {
     const client = await getSupabaseClient();
     const { data } = await client.from('stories').select('*').order('created_at', { ascending: false });
-    if (!data || data.length === 0) return getLocal<Story>('stories');
+    if (!data || data.length === 0) {
+      setLocal('stories', []);
+      return [];
+    }
 
     const stories = await Promise.all(data.map(async (row: any) => {
       const story = mapStory(row) as Story;
