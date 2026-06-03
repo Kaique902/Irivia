@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createChallengeUrl, copyToClipboard } from '@/lib/share';
-import { Share2, Check, Copy, Swords } from 'lucide-react';
+import { useStore } from '@/store/store';
+import { useToast } from '@/store/toast';
+import { Share2, Check, Copy, Swords, Zap } from 'lucide-react';
 
 interface ChallengeFriendProps {
   storyId: string;
@@ -13,16 +15,23 @@ interface ChallengeFriendProps {
 export default function ChallengeFriend({ storyId, storyTitle }: ChallengeFriendProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [challengeType, setChallengeType] = useState('write');
+  const [challengeType, setChallengeType] = useState<'write' | 'branch' | 'vote'>('write');
+  const { user, sendChallenge } = useStore();
+  const { show: showToast } = useToast();
 
   const handleCopy = async () => {
+    if (!user) { showToast('Faça login para desafiar alguém', 'error'); return; }
+    sendChallenge(storyId, storyTitle, challengeType);
     const url = createChallengeUrl(storyId, challengeType);
     await copyToClipboard(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    showToast(`Desafio de ${challengeType === 'branch' ? 'ramo' : challengeType === 'write' ? 'escrita' : 'voto'} criado! Link copiado.`);
   };
 
   const handleShare = async () => {
+    if (!user) { showToast('Faça login para desafiar alguém', 'error'); return; }
+    sendChallenge(storyId, storyTitle, challengeType);
     const url = createChallengeUrl(storyId, challengeType);
     if (navigator.share) {
       await navigator.share({
@@ -34,6 +43,8 @@ export default function ChallengeFriend({ storyId, storyTitle }: ChallengeFriend
       await handleCopy();
     }
   };
+
+  const xpMap = { write: 15, branch: 20, vote: 10 };
 
   return (
     <div>
@@ -56,20 +67,21 @@ export default function ChallengeFriend({ storyId, storyTitle }: ChallengeFriend
 
             <div className="flex gap-2">
               {[
-                { type: 'write', label: 'Escrever' },
-                { type: 'branch', label: 'Criar Ramo' },
-                { type: 'vote', label: 'Votar' },
+                { type: 'write' as const, label: 'Escrever', xp: 15 },
+                { type: 'branch' as const, label: 'Criar Ramo', xp: 20 },
+                { type: 'vote' as const, label: 'Votar', xp: 10 },
               ].map(t => (
                 <button
                   key={t.type}
                   onClick={() => setChallengeType(t.type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-all flex flex-col items-center ${
                     challengeType === t.type
                       ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
                       : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                   }`}
                 >
                   {t.label}
+                  <span className="flex items-center gap-0.5 text-[10px] text-yellow-500"><Zap className="w-2.5 h-2.5" />+{t.xp}</span>
                 </button>
               ))}
             </div>

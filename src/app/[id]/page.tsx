@@ -47,7 +47,7 @@ export default function StoryPage() {
   const searchParams = useSearchParams();
   const challengeType = searchParams.get('challenge');
   const [hydrated, setHydrated] = useState(false);
-  const { stories, voteNode, addNode, removeStory, votedNodes, user, reportNode, completeReadChallenge, followStory, unfollowStory, toggleMuteStory, followUser, unfollowUser, users } = useStore();
+  const { stories, voteNode, addNode, removeStory, votedNodes, user, reportNode, completeReadChallenge, followStory, unfollowStory, toggleMuteStory, followUser, unfollowUser, users, friendChallenges, completeFriendChallenge, acceptChallenge } = useStore();
   const { addNotification } = useNotificationStore();
   const { show: showToast } = useToast();
   const story = stories.find(s => s.id === id);
@@ -183,6 +183,10 @@ export default function StoryPage() {
       createdAt: new Date().toISOString(),
     };
     addNode(story.id, newNode);
+    // Auto-complete friend challenge if applicable
+    const challengeAction = newContent.length > 200 ? 'branch' : 'write';
+    const pendingFC = friendChallenges.find(fc => fc.storyId === story.id && fc.type === challengeAction && fc.status === 'accepted');
+    if (pendingFC) { completeFriendChallenge(pendingFC.id); showToast('Desafio concluído! XP ganho!'); }
     setNewContent('');
     setAddingTo(null);
     setShowConfetti(true);
@@ -243,6 +247,9 @@ export default function StoryPage() {
     if (!user) { showToast('Faça login para votar', 'error'); return; }
     if (votedNodes.includes(nodeId)) return;
     voteNode(nodeId, type);
+    // Auto-complete friend challenge if applicable
+    const pendingFC = friendChallenges.find(fc => fc.storyId === story?.id && fc.type === 'vote' && fc.status === 'accepted');
+    if (pendingFC) { completeFriendChallenge(pendingFC.id); showToast('Desafio concluído! XP ganho!'); }
     setLastVoted(nodeId);
     setShowXP(nodeId);
     if (type === 'hot') {

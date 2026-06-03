@@ -49,6 +49,19 @@ export interface Challenge {
   date: string;
 }
 
+export interface FriendChallenge {
+  id: string;
+  fromUser: string;
+  toUser?: string;
+  storyId: string;
+  storyTitle: string;
+  type: 'write' | 'branch' | 'vote';
+  status: 'pending' | 'accepted' | 'completed' | 'expired';
+  xp: number;
+  createdAt: string;
+  completedAt?: string;
+}
+
 export interface Report {
   id: string;
   nodeId: string;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Story, StoryNode, Comment, Challenge, Report } from '@/types';
+import { Story, StoryNode, Comment, Challenge, Report, FriendChallenge } from '@/types';
 import { sanitizeString, sanitizeUsername, sanitizePassword, validatePattern, hashPassword, checkRateLimit } from '@/lib/sanitize';
 import { useNotificationStore } from '@/store/notifications';
 import {
@@ -50,6 +50,8 @@ interface AppState {
   voteLog: number[];
   feedbackLastShown: number | null;
   feedbackTexts: string[];
+  friendChallenges: FriendChallenge[];
+  challengeHistory: string[];
   
   // Auth
   register: (username: string, magicWord: string, pattern: number[]) => Promise<boolean>;
@@ -81,6 +83,10 @@ interface AppState {
   autoCompleteVoteChallenge: () => void;
   autoCompleteNodeChallenge: () => void;
   completeReadChallenge: () => void;
+  // Friend Challenges
+  sendChallenge: (storyId: string, storyTitle: string, type: 'write' | 'branch' | 'vote') => string;
+  acceptChallenge: (challengeId: string) => void;
+  completeFriendChallenge: (challengeId: string) => void;
   recordVisit: () => void;
   recordVoteTime: () => void;
   submitFeedback: (text: string) => void;
@@ -135,6 +141,34 @@ const CHALLENGE_PROMPTS = [
   { type: 'read' as const, prompt: 'Leia 2 histórias até o final', xp: 8 },
   { type: 'write' as const, prompt: 'Escreva uma frase com tema "amor"', xp: 12 },
   { type: 'vote' as const, prompt: 'Vote Hot em 5 ramos', xp: 15 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que termine com "..."', xp: 10 },
+  { type: 'branch' as const, prompt: 'Crie um desvio inesperado', xp: 14 },
+  { type: 'read' as const, prompt: 'Leia 3 histórias diferentes', xp: 10 },
+  { type: 'write' as const, prompt: 'Escreva uma frase só com diálogo', xp: 13 },
+  { type: 'vote' as const, prompt: 'Vote em 5 histórias hoje', xp: 12 },
+  { type: 'write' as const, prompt: 'Escreva uma frase com tema "esperança"', xp: 14 },
+  { type: 'branch' as const, prompt: 'Crie um ramo a partir do meio da história', xp: 15 },
+  { type: 'read' as const, prompt: 'Leia uma história de gênero diferente', xp: 9 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que descreva uma paisagem', xp: 11 },
+  { type: 'vote' as const, prompt: 'Vote Cold em 3 ramos', xp: 10 },
+  { type: 'write' as const, prompt: 'Escreva uma frase com tema "mistério"', xp: 15 },
+  { type: 'branch' as const, prompt: 'Crie um final alternativo', xp: 16 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que introduza um novo personagem', xp: 13 },
+  { type: 'vote' as const, prompt: 'Vote nos 3 ramos mais recentes', xp: 11 },
+  { type: 'write' as const, prompt: 'Escreva uma frase com tema "descoberta"', xp: 12 },
+  { type: 'branch' as const, prompt: 'Ramifique a partir do node mais votado', xp: 14 },
+  { type: 'read' as const, prompt: 'Leia uma história até 50%', xp: 7 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que use uma metáfora', xp: 14 },
+  { type: 'vote' as const, prompt: 'Vote em 7 ramos hoje', xp: 14 },
+  { type: 'write' as const, prompt: 'Escreva uma frase com tema "coragem"', xp: 13 },
+  { type: 'branch' as const, prompt: 'Crie um ramo com apenas 3 palavras', xp: 11 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que gere suspense', xp: 15 },
+  { type: 'read' as const, prompt: 'Leia uma história de fantasia', xp: 8 },
+  { type: 'write' as const, prompt: 'Escreva uma frase com tema "saudade"', xp: 12 },
+  { type: 'vote' as const, prompt: 'Vote Hot em 3 e Cold em 3', xp: 16 },
+  { type: 'branch' as const, prompt: 'Crie um ramo que mude o gênero', xp: 17 },
+  { type: 'write' as const, prompt: 'Escreva uma frase que comece com "E então"', xp: 11 },
+  { type: 'read' as const, prompt: 'Complete a leitura de uma história', xp: 10 },
 ];
 
 export const EMOJIS = EMOJI_GRID;
@@ -157,6 +191,8 @@ export const useStore = create<AppState>()(
       voteLog: [],
       feedbackLastShown: null,
       feedbackTexts: [],
+      friendChallenges: [],
+      challengeHistory: [],
       adminLogs: [],
 
       loadStories: async () => {
@@ -373,14 +409,23 @@ export const useStore = create<AppState>()(
 
       generateDailyChallenges: () => {
         const today = new Date().toISOString().split('T')[0];
-        const shuffled = [...CHALLENGE_PROMPTS].sort(() => Math.random() - 0.5);
-        const daily = shuffled.slice(0, 3).map((p, i) => ({
-          id: `ch${today}${i}`,
-          ...p,
-          completed: false,
-          date: today,
-        }));
-        set({ challenges: daily, dailyVotes: [], dailyNodeCount: 0 });
+        const { challengeHistory } = get();
+        // Pick from least recently used prompts
+        const usageCount = new Map<string, number>();
+        for (const h of challengeHistory) {
+          usageCount.set(h, (usageCount.get(h) || 0) + 1);
+        }
+        const sorted = [...CHALLENGE_PROMPTS].sort((a, b) => {
+          const ka = `${a.type}-${a.prompt}`;
+          const kb = `${b.type}-${b.prompt}`;
+          return (usageCount.get(ka) || 0) - (usageCount.get(kb) || 0);
+        });
+        const daily = sorted.slice(0, 3).map((p, i) => {
+          const key = `${p.type}-${p.prompt}`;
+          return { id: `ch${today}${i}`, ...p, completed: false, date: today, key };
+        });
+        const newHistory = [...challengeHistory, ...daily.map(d => d.key)].slice(-90);
+        set({ challenges: daily, challengeHistory: newHistory, dailyVotes: [], dailyNodeCount: 0 });
       },
 
       autoCompleteVoteChallenge: () => {
@@ -402,6 +447,38 @@ export const useStore = create<AppState>()(
         const pending = challenges.find(c => !c.completed && c.type === 'read');
         if (pending) get().completeChallenge(pending.id);
       },
+
+      // Friend Challenges
+      sendChallenge: (storyId, storyTitle, type) => {
+        const { user } = get();
+        if (!user) return '';
+        const id = `fc${Date.now()}`;
+        const fc: FriendChallenge = {
+          id, fromUser: user.username, storyId, storyTitle, type,
+          status: 'pending', xp: type === 'branch' ? 20 : type === 'write' ? 15 : 10,
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({ friendChallenges: [...s.friendChallenges, fc] }));
+        return id;
+      },
+      acceptChallenge: (challengeId) => set((s) => ({
+        friendChallenges: s.friendChallenges.map(fc =>
+          fc.id === challengeId && fc.status === 'pending'
+            ? { ...fc, status: 'accepted' as const }
+            : fc
+        ),
+      })),
+      completeFriendChallenge: (challengeId) => set((s) => {
+        const fc = s.friendChallenges.find(f => f.id === challengeId);
+        if (!fc || fc.status === 'completed') return {};
+        const xpBonus = fc.xp;
+        return {
+          friendChallenges: s.friendChallenges.map(f =>
+            f.id === challengeId ? { ...f, status: 'completed' as const, completedAt: new Date().toISOString() } : f
+          ),
+          user: s.user ? { ...s.user, xp: s.user.xp + xpBonus } : null,
+        };
+      }),
 
       recordVisit: () => {
         const { user } = get();

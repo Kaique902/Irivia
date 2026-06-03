@@ -1,19 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store/store';
-import { Target, Zap, Check, Flame, BookOpen, GitBranch } from 'lucide-react';
+import { Target, Zap, Check, Flame, BookOpen, GitBranch, Clock } from 'lucide-react';
 
-const typeIcons = {
+const typeIcons: Record<string, React.ComponentType<any>> = {
   write: Pen,
   vote: Flame,
   branch: GitBranch,
   read: BookOpen,
 };
 
-const typeLinks = {
+const typeLinks: Record<string, string> = {
   write: '/create',
   vote: '/',
   branch: '/',
@@ -36,26 +36,54 @@ const typeLabels: Record<string, string> = {
   read: 'Ler uma História',
 };
 
+function getSecondsUntilMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.floor((midnight.getTime() - now.getTime()) / 1000);
+}
+
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function DailyChallenge() {
   const router = useRouter();
   const { challenges, generateDailyChallenges, user } = useStore();
+  const [expiresIn, setExpiresIn] = useState(getSecondsUntilMidnight);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const isToday = challenges.length > 0 && challenges[0].id.startsWith(`ch${today}`);
+    const isToday = challenges.length > 0 && challenges[0].date === today;
     if (!isToday) {
       generateDailyChallenges();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const remaining = getSecondsUntilMidnight();
+      setExpiresIn(remaining);
+      if (remaining <= 0) {
+        generateDailyChallenges();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   if (!user || challenges.length === 0) return null;
 
   const completedCount = challenges.filter(c => c.completed).length;
   const allCompleted = completedCount === challenges.length;
+  const isUrgent = expiresIn < 3600;
 
   const handleClick = (type: string) => {
-    router.push(typeLinks[type as keyof typeof typeLinks] || '/');
+    router.push(typeLinks[type] || '/');
   };
 
   return (
@@ -65,9 +93,19 @@ export default function DailyChallenge() {
           <Target className="w-4 h-4 text-orange-400" />
           Desafios de Hoje
         </h3>
-        <span className="text-xs text-zinc-500">
-          {completedCount}/{challenges.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <motion.div
+            animate={isUrgent ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className={`flex items-center gap-1 text-xs ${isUrgent ? 'text-red-400' : 'text-zinc-500'}`}
+          >
+            <Clock className="w-3 h-3" />
+            {formatTime(expiresIn)}
+          </motion.div>
+          <span className="text-xs text-zinc-500">
+            {completedCount}/{challenges.length}
+          </span>
+        </div>
       </div>
 
       {allCompleted ? (
@@ -80,7 +118,7 @@ export default function DailyChallenge() {
             <Check className="w-5 h-5 text-green-400" />
           </div>
           <p className="text-sm text-green-400 font-medium">Todos completados!</p>
-          <p className="text-xs text-zinc-500">Volte amanhã para novos desafios</p>
+          <p className="text-xs text-zinc-500">Próximos desafios em {formatTime(expiresIn)}</p>
         </motion.div>
       ) : (
         <div className="space-y-2">
@@ -121,6 +159,14 @@ export default function DailyChallenge() {
             );
           })}
         </div>
+      )}
+
+      {/* Urgency warning */}
+      {isUrgent && !allCompleted && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="mt-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 text-center">
+          Expira em menos de 1 hora!
+        </motion.div>
       )}
     </div>
   );
