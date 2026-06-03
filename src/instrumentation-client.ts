@@ -9,6 +9,9 @@ Sentry.init({
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
   enabled: dsnValid,
+  integrations: (integrations) => {
+    return integrations.filter(i => i.name !== 'Feedback');
+  },
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/store';
 import { Story } from '@/types';
@@ -14,6 +14,14 @@ export default function CreatePage() {
   const [title, setTitle] = useState('');
   const [seed, setSeed] = useState('');
   const [genre, setGenre] = useState('thriller');
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth');
+    }
+  }, [user, router]);
+
+  if (!user) return null;
 
   const handleCreate = () => {
     if (!title.trim() || !seed.trim()) return;

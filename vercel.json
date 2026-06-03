@@ -46,8 +46,8 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api|_next|static|favicon.ico|manifest.json|sw.js|sw-register.js|icons|screenshots).*)",
-      "destination": "/"
+      "source": "/api/sentry-example-api",
+      "destination": "/api/sentry-example-api"
     }
   ]
 }

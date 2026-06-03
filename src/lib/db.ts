@@ -158,15 +158,49 @@ export async function dbUpdateUser(user: User, allUsers: User[]): Promise<void> 
 
 // ─── Stories ───────────────────────────────────────────────
 
+export async function dbGetNodes(storyId: string): Promise<StoryNode[]> {
+  if (!supabaseUrl || !supabaseAnonKey) return [];
+  try {
+    const client = await getSupabaseClient();
+    const { data } = await client
+      .from('story_nodes')
+      .select('*')
+      .eq('story_id', storyId)
+      .order('created_at', { ascending: true });
+    if (data) return data.map((n: any) => ({
+      id: n.id,
+      content: n.content,
+      author: n.author,
+      emotion: n.emotion,
+      parentId: n.parent_id,
+      votes: n.votes,
+      hotVotes: n.hot_votes,
+      coldVotes: n.cold_votes,
+      trending: n.trending,
+      createdAt: n.created_at,
+    })) as StoryNode[];
+  } catch { /* fall through */ }
+  return [];
+}
+
 export async function dbGetStories(): Promise<Story[]> {
-  const supabase = await getBrowserClient();
-  if (supabase) {
-    try {
-      const { data } = await supabase.from('stories').select('*').order('created_at', { ascending: false });
-      if (data) return data.map(mapStory) as Story[];
-    } catch { /* fall through */ }
+  if (!supabaseUrl || !supabaseAnonKey) return getLocal<Story>('stories');
+
+  try {
+    const client = await getSupabaseClient();
+    const { data } = await client.from('stories').select('*').order('created_at', { ascending: false });
+    if (!data || data.length === 0) return getLocal<Story>('stories');
+
+    const stories = await Promise.all(data.map(async (row: any) => {
+      const story = mapStory(row) as Story;
+      const nodes = await dbGetNodes(story.id);
+      story.nodes = nodes;
+      return story;
+    }));
+    return stories;
+  } catch {
+    return getLocal<Story>('stories');
   }
-  return getLocal<Story>('stories');
 }
 
 export async function dbAddStory(story: Story): Promise<void> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,9 +14,17 @@ const DailyChallenge = dynamic(() => import('@/components/ui/DailyChallenge'), {
 const StoryOfTheDay = dynamic(() => import('@/components/ui/StoryOfTheDay'), { ssr: false });
 
 export default function Home() {
-  const { stories, user, completeOnboarding, votedNodes, users, followStory, unfollowStory } = useStore();
+  const { stories, user, completeOnboarding, votedNodes, users, followStory, unfollowStory, loadStories } = useStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [feedFilter, setFeedFilter] = useState<'all' | 'trending' | 'recent' | 'following'>('all');
+  const storiesLoaded = useRef(false);
+
+  useEffect(() => {
+    if (!storiesLoaded.current) {
+      storiesLoaded.current = true;
+      loadStories();
+    }
+  }, [loadStories]);
 
   useEffect(() => {
     if (user && !user.onboardingCompleted) {
@@ -170,8 +178,8 @@ export default function Home() {
       <section className="px-4 pb-16">
         <div className="max-w-4xl mx-auto">
           <div className="space-y-4">
-            {feedStories.map((story, i) => (
-              <motion.div key={story.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+            {feedStories.map((story) => (
+              <motion.div key={story.id} layout>
                 <Link href={`/${story.id}`} className="card block p-6 hover:border-orange-500/30 group">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs font-medium">{story.genre}</span>

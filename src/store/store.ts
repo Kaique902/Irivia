@@ -7,7 +7,7 @@ import {
   dbRegister, dbLogin, dbAddStory, dbRemoveStory, dbAddNode, dbVoteNode,
   dbAddComment, dbAddReport, dbAddFeedback,
   dbCheckAdmin, dbAddAdminLog, dbRecordVisit, dbRecordVoteTime,
-  dbPromoteUser, dbDemoteUser,
+  dbPromoteUser, dbDemoteUser, dbGetStories,
 } from '@/lib/db';
 
 const EMOJI_GRID = [
@@ -58,6 +58,7 @@ interface AppState {
   completeOnboarding: () => void;
   
   // Story actions
+  loadStories: () => Promise<void>;
   addStory: (story: Story) => void;
   removeStory: (storyId: string) => void;
   addNode: (storyId: string, node: StoryNode) => void;
@@ -157,6 +158,24 @@ export const useStore = create<AppState>()(
       feedbackLastShown: null,
       feedbackTexts: [],
       adminLogs: [],
+
+      loadStories: async () => {
+        const remote = await dbGetStories();
+        if (remote.length > 0) {
+          set((s) => {
+            const existing = new Set(s.stories.map(r => r.id));
+            const hasNew = remote.some(r => !existing.has(r.id));
+            if (!hasNew) return {};
+            const merged = [...remote];
+            for (const local of s.stories) {
+              if (!merged.find((r: Story) => r.id === local.id)) {
+                merged.push(local);
+              }
+            }
+            return { stories: merged };
+          });
+        }
+      },
 
       register: async (username, magicWord, pattern) => {
         const { users, bannedUsers } = get();
