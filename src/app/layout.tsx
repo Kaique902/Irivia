@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/react';
 import ClientLayout from '@/components/layout/ClientLayout';
 import './globals.css';
 
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </footer>
         </ClientLayout>
         <Script src="/sw-register.js" strategy="afterInteractive" />
+        <Analytics />
       </body>
     </html>
   );
