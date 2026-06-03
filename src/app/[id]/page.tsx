@@ -13,6 +13,7 @@ import { createNodeDeepLink } from '@/lib/shareCard';
 
 const CommentSection = dynamic(() => import('@/components/story/CommentSection'), { ssr: false });
 const ChallengeFriend = dynamic(() => import('@/components/ui/ChallengeFriend'), { ssr: false });
+import { useToast } from '@/store/toast';
 import { ArrowLeft, Flame, Snowflake, Plus, ChevronDown, ChevronUp, Send, X, Users, GitBranch, Sparkles, Flag, Check, Trophy, Zap, FileDown, Bell, BellOff, Trash2, Share2, Swords } from 'lucide-react';
 
 // Confetti effect
@@ -48,6 +49,7 @@ export default function StoryPage() {
   const [hydrated, setHydrated] = useState(false);
   const { stories, voteNode, addNode, removeStory, votedNodes, user, reportNode, completeReadChallenge, followStory, unfollowStory, toggleMuteStory, followUser, unfollowUser, users } = useStore();
   const { addNotification } = useNotificationStore();
+  const { show: showToast } = useToast();
   const story = stories.find(s => s.id === id);
 
   useEffect(() => {
@@ -166,6 +168,7 @@ export default function StoryPage() {
   }
 
   const handleAddNode = (parentId: string) => {
+    if (!user) { showToast('Faça login para adicionar uma continuação', 'error'); return; }
     if (!newContent.trim()) return;
     const newNode: StoryNode = {
       id: `n${Date.now()}`,
@@ -237,6 +240,7 @@ export default function StoryPage() {
   };
 
   const handleVote = (nodeId: string, type: 'hot' | 'cold') => {
+    if (!user) { showToast('Faça login para votar', 'error'); return; }
     if (votedNodes.includes(nodeId)) return;
     voteNode(nodeId, type);
     setLastVoted(nodeId);
@@ -430,6 +434,7 @@ export default function StoryPage() {
                           </Link>
                           {user && node.author !== user.username && (
                             <button onClick={() => {
+                              if (!user) { showToast('Faça login para seguir usuários', 'error'); return; }
                               const authorUser = users.find(u => u.username === node.author);
                               if (authorUser) {
                                 user.following.includes(authorUser.id) ? unfollowUser(authorUser.id) : followUser(authorUser.id);
