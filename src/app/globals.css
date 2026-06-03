@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-hover: #27272a;
+  --border: #27272a;
+  --text: #fafafa;
+  --text-muted: #71717a;
+  --accent: #f97316;
+  --accent-2: #06b6d4;
+  --hot: #f97316;
+  --cold: #06b6d4;
+}
+
+* { scrollbar-width: thin; scrollbar-color: #27272a transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply bg-[#18181b] border border-[#27272a] rounded-2xl transition-all duration-200;
+  }
+  .card:hover {
+    @apply border-[#3f3f46];
+  }
+  .btn {
+    @apply px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 active:scale-95;
+  }
+  .btn-primary {
+    @apply bg-orange-500 hover:bg-orange-600 text-white;
+  }
+  .btn-ghost {
+    @apply hover:bg-zinc-800 text-zinc-400 hover:text-white;
+  }
+  .input {
+    @apply w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-all;
+  }
+}
