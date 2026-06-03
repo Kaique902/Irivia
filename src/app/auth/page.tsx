@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, EMOJIS } from '@/store/store';
-import { BookOpen, ArrowRight, Sparkles, Check, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, ArrowRight, Sparkles, Check, AlertCircle, Eye, EyeOff, Swords, PenLine, Vote, GitBranch } from 'lucide-react';
 
 type Step = 'word' | 'pattern' | 'confirm';
 
@@ -21,9 +21,29 @@ export default function AuthPage() {
   const [showAsNumbers, setShowAsNumbers] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [challengeType, setChallengeType] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { if (user) router.push('/'); }, [user, router]);
+  useEffect(() => { setMounted(true); }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    if (redirect) {
+      const decoded = decodeURIComponent(redirect);
+      const match = decoded.match(/challenge=(write|branch|vote)/);
+      if (match) setChallengeType(match[1]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      const params = new URLSearchParams(window.location.search);
+      router.push(params.get('redirect') || '/');
+    }
+  }, [user, router]);
+
+  if (!mounted) return null;
   if (user) return null;
 
   const handleWordSubmit = () => {
@@ -60,7 +80,8 @@ export default function AuthPage() {
       success = await login(loginUsername, magicWord, pattern);
       if (!success) { setError('Nickname, palavra ou padrão incorreto'); setLoading(false); return; }
     }
-    router.push('/');
+    const params = new URLSearchParams(window.location.search);
+    router.push(params.get('redirect') || '/');
   };
 
   const reset = () => { setStep('word'); setMagicWord(''); setUsername(''); setLoginUsername(''); setPattern([]); setError(''); };
@@ -78,6 +99,42 @@ export default function AuthPage() {
           <h1 className="text-3xl font-extrabold mb-2">Irivia</h1>
           <p className="text-zinc-400">Onde a comunidade decide o próximo capítulo</p>
         </motion.div>
+
+        {/* Challenge context */}
+        <AnimatePresence>
+          {challengeType && (
+            <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              className="mb-5 p-4 rounded-xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-cyan-500/10 border border-orange-500/20 overflow-hidden relative">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,146,60,0.08),transparent_60%)]" />
+              <div className="relative flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {challengeType === 'write' ? <PenLine className="w-5 h-5 text-orange-400" /> :
+                   challengeType === 'branch' ? <GitBranch className="w-5 h-5 text-cyan-400" /> :
+                   <Vote className="w-5 h-5 text-orange-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Swords className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                    <p className="text-sm font-bold text-white">Desafio recebido!</p>
+                  </div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    {challengeType === 'write' && 'Alguém te desafiou a escrever o próximo capítulo. Crie sua conta agora e mostre seu talento — a história espera por você!'}
+                    {challengeType === 'branch' && 'Um novo caminho precisa ser criado. Alguém te desafiou a abrir um ramo inédito nesta história. Entre e deixe sua marca!'}
+                    {challengeType === 'vote' && 'Os votos decidem o rumo da história. Alguém te desafiou a votar nos melhores caminhos. Sua escolha importa — entre agora!'}
+                  </p>
+                  <motion.div className="flex gap-1.5 mt-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-[10px] font-medium text-orange-400 border border-orange-500/10">
+                      +{challengeType === 'vote' ? '5' : '15'} XP
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-medium text-zinc-400">
+                      Após entrar
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mode toggle */}
         <div className="flex gap-2 mb-6">

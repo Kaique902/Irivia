@@ -20,11 +20,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Re-sync admin status from server on mount
-    if (user && !user.isAdmin) {
-      useStore.getState().setAdminStatus(user.username);
+    const currentUser = useStore.getState().user;
+    if (currentUser && !currentUser.isAdmin) {
+      useStore.getState().setAdminStatus(currentUser.username);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const {

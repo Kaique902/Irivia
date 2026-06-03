@@ -10,7 +10,8 @@ export default function Toaster() {
 
   const handleClick = (message: string) => {
     if (message.includes('logado') || message.includes('login')) {
-      router.push('/auth');
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      router.push(`/auth?redirect=${redirect}`);
     }
   };
 

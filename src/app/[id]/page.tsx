@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -18,16 +18,20 @@ import { ArrowLeft, Flame, Snowflake, Plus, ChevronDown, ChevronUp, Send, X, Use
 
 // Confetti effect
 function Confetti({ show }: { show: boolean }) {
+  const [size, setSize] = useState({ w: 800, h: 600 });
+  useEffect(() => {
+    setSize({ w: window.innerWidth, h: window.innerHeight });
+  }, []);
   if (!show) return null;
   return (
     <div className="fixed inset-0 pointer-events-none z-50">
       {Array.from({ length: 30 }).map((_, i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 1, y: -20, x: Math.random() * window.innerWidth }}
+          initial={{ opacity: 1, y: -20, x: Math.random() * size.w }}
           animate={{
             opacity: 0,
-            y: window.innerHeight,
+            y: size.h,
             rotate: Math.random() * 360,
           }}
           transition={{ duration: 1.5 + Math.random(), delay: Math.random() * 0.3 }}
@@ -42,6 +46,18 @@ function Confetti({ show }: { show: boolean }) {
 }
 
 export default function StoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <StoryContent />
+    </Suspense>
+  );
+}
+
+function StoryContent() {
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,6 +90,10 @@ export default function StoryPage() {
   const storyRef = useRef<HTMLDivElement>(null);
   const [readProgress, setReadProgress] = useState(0);
   const [maxProgress, setMaxProgress] = useState(0);
+  const [redirectUrl, setRedirectUrl] = useState('/auth');
+  useEffect(() => {
+    setRedirectUrl(`/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  }, []);
 
   // Build tree structure
   const childrenMap = useMemo(() => {
@@ -286,41 +306,50 @@ export default function StoryPage() {
             <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
           <div className="flex items-center gap-1.5">
-            {/* Follow/subscribe story */}
-            {user && (
-              <div className="relative">
-                <button onClick={() => setShowStoryMenu(!showStoryMenu)}
-                  className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-all">
-                  {isMuted ? <BellOff className="w-3.5 h-3.5" /> : isFollowingStory ? <Bell className="w-3.5 h-3.5 text-orange-400" /> : <Bell className="w-3.5 h-3.5" />}
+            {!user ? (
+              <>
+                <Link href={redirectUrl}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all">Entrar</Link>
+                <Link href={redirectUrl}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 text-white hover:bg-orange-400 transition-all">Criar</Link>
+              </>
+            ) : (
+              <>
+                {/* Follow/subscribe story */}
+                <div className="relative">
+                  <button onClick={() => setShowStoryMenu(!showStoryMenu)}
+                    className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-all">
+                    {isMuted ? <BellOff className="w-3.5 h-3.5" /> : isFollowingStory ? <Bell className="w-3.5 h-3.5 text-orange-400" /> : <Bell className="w-3.5 h-3.5" />}
+                  </button>
+                  {showStoryMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowStoryMenu(false)} />
+                      <div className="absolute right-0 top-full mt-1 w-48 card z-50 p-2">
+                        <button onClick={() => { isFollowingStory ? unfollowStory(story.id) : followStory(story.id); setShowStoryMenu(false); }}
+                          className="w-full p-2 rounded-lg text-left text-xs hover:bg-zinc-800 transition-all flex items-center gap-2">
+                          {isFollowingStory ? <BellOff className="w-3.5 h-3.5 text-red-400" /> : <Bell className="w-3.5 h-3.5 text-orange-400" />}
+                          {isFollowingStory ? 'Deixar de seguir' : 'Seguir história'}
+                        </button>
+                        <button onClick={() => { toggleMuteStory(story.id); setShowStoryMenu(false); }}
+                          className="w-full p-2 rounded-lg text-left text-xs hover:bg-zinc-800 transition-all flex items-center gap-2">
+                          {isMuted ? <Bell className="w-3.5 h-3.5 text-zinc-400" /> : <BellOff className="w-3.5 h-3.5 text-zinc-400" />}
+                          {isMuted ? 'Ativar notificações' : 'Silenciar notificações'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button onClick={() => downloadStoryPDF(story)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-all">
+                  <FileDown className="w-3.5 h-3.5" /> PDF
                 </button>
-                {showStoryMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowStoryMenu(false)} />
-                    <div className="absolute right-0 top-full mt-1 w-48 card z-50 p-2">
-                      <button onClick={() => { isFollowingStory ? unfollowStory(story.id) : followStory(story.id); setShowStoryMenu(false); }}
-                        className="w-full p-2 rounded-lg text-left text-xs hover:bg-zinc-800 transition-all flex items-center gap-2">
-                        {isFollowingStory ? <BellOff className="w-3.5 h-3.5 text-red-400" /> : <Bell className="w-3.5 h-3.5 text-orange-400" />}
-                        {isFollowingStory ? 'Deixar de seguir' : 'Seguir história'}
-                      </button>
-                      <button onClick={() => { toggleMuteStory(story.id); setShowStoryMenu(false); }}
-                        className="w-full p-2 rounded-lg text-left text-xs hover:bg-zinc-800 transition-all flex items-center gap-2">
-                        {isMuted ? <Bell className="w-3.5 h-3.5 text-zinc-400" /> : <BellOff className="w-3.5 h-3.5 text-zinc-400" />}
-                        {isMuted ? 'Ativar notificações' : 'Silenciar notificações'}
-                      </button>
-                    </div>
-                  </>
+                {(user?.isAdmin || user?.id === story.authorId) && (
+                  <button onClick={() => { if (window.confirm('Deletar esta história? Esta ação não pode ser desfeita.')) { router.push('/'); setTimeout(() => removeStory(story.id), 100); } }}
+                    className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs transition-all">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
-              </div>
-            )}
-            <button onClick={() => downloadStoryPDF(story)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-all">
-              <FileDown className="w-3.5 h-3.5" /> PDF
-            </button>
-            {(user?.isAdmin || user?.id === story.authorId) && (
-              <button onClick={() => { if (window.confirm('Deletar esta história? Esta ação não pode ser desfeita.')) { router.push('/'); setTimeout(() => removeStory(story.id), 100); } }}
-                className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs transition-all">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              </>
             )}
           </div>
           <div className="flex items-center gap-4 text-xs text-zinc-500">
@@ -357,6 +386,7 @@ export default function StoryPage() {
               </p>
             </div>
             <button onClick={() => {
+              if (!user) { router.push(redirectUrl); return; }
               if (challengeType === 'write' || challengeType === 'branch') {
                 const lastNode = mainPath[mainPath.length - 1];
                 if (lastNode) setAddingTo(lastNode);

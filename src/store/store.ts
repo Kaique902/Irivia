@@ -114,7 +114,7 @@ const DEMO_STORIES: Story[] = [
     seed: 'Era uma vez uma menina chamada Chapeuzinho Vermelho. Sua avó, que morava do outro lado da floresta, estava doente. A mãe pediu que ela levasse uma cesta de doces para a avó. "Não fale com estranhos e não saia do caminho", avisou. Mas a floresta era cheia de escolhas…',
     genre: 'fantasia',
     totalBranches: 10,
-    participants: 4,
+    participants: 1,
     authorId: 'uadmin',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     nodes: [

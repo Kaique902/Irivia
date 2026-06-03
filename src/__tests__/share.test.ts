@@ -11,8 +11,8 @@ describe('createChallengeUrl', () => {
     expect(url).toContain('/story456?challenge=branch');
   });
 
-  it('includes origin in URL', () => {
+  it('includes origin + UTM params in URL', () => {
     const url = createChallengeUrl('test', 'vote');
-    expect(url).toMatch(/^https?:\/\/.+\/test\?challenge=vote$/);
+    expect(url).toMatch(/^https?:\/\/.+\/test\?challenge=vote&utm_source/);
   });
 });
